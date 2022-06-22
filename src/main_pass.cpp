@@ -98,6 +98,17 @@ main_pass_execute( const struct ft_device*   device,
 	data->mesh_renderer.render( cmd, data->mesh_generator.get_meshes() );
 	data->ui_renderer.render( cmd );
 
+	if ( ft_get_mouse_wheel() > 0 )
+	{
+		data->ui_renderer.on_mouse_scroll_up();
+		data->current_voxel = data->ui_renderer.get_selected_voxel();
+	}
+	else if ( ft_get_mouse_wheel() < 0 )
+	{
+		data->ui_renderer.on_mouse_scroll_down();
+		data->current_voxel = data->ui_renderer.get_selected_voxel();
+	}
+
 	bool lmb = ft_is_button_pressed( FT_BUTTON_LEFT );
 	bool rmb = ft_is_button_pressed( FT_BUTTON_RIGHT );
 

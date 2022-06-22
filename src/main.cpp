@@ -118,15 +118,16 @@ int
 main( int argc, char** argv )
 {
 	struct ft_window_info window_info = {};
-	window_info.title = "fluent-sandbox", window_info.x = 100;
-	window_info.y            = 100;
-	window_info.width        = WINDOW_WIDTH;
-	window_info.height       = WINDOW_HEIGHT;
-	window_info.resizable    = 0;
-	window_info.centered     = 1;
-	window_info.fullscreen   = 0;
-	window_info.grab_mouse   = 0;
-	window_info.renderer_api = renderer_api;
+	window_info.title                 = "vk-craft";
+	window_info.x                     = 100;
+	window_info.y                     = 100;
+	window_info.width                 = WINDOW_WIDTH;
+	window_info.height                = WINDOW_HEIGHT;
+	window_info.resizable             = 0;
+	window_info.centered              = 1;
+	window_info.fullscreen            = 0;
+	window_info.grab_mouse            = 0;
+	window_info.renderer_api          = renderer_api;
 
 	struct ft_application_config config = {};
 	config.argc                         = argc;
