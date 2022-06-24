@@ -12,12 +12,13 @@ struct ChunkManager;
 struct Chunk
 {
 	ChunkManager*                         chunk_manager;
-	glm::ivec3                                  position;
+	glm::ivec3                            position;
 	std::array<Voxel::Type, CHUNK_VOLUME> data;
 	mutable bool                          modified = false;
+	mutable size_t                        last_access_frame;
 
 	void
-	init( const glm::vec3 position, ChunkManager* );
+	init( const glm::vec3 position, ChunkManager*, size_t );
 
 	Voxel::Type
 	get_voxel( const glm::ivec3 ) const;

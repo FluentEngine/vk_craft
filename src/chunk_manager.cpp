@@ -8,6 +8,7 @@ ChunkManager::init( MeshGenerator* mesh_generator )
 	this->mesh_generator     = mesh_generator;
 	last_update_position     = glm::ivec3( 0, 0, 0 );
 	world_changed_last_frame = false;
+	frame_count              = 0;
 }
 
 bool
@@ -23,6 +24,30 @@ ChunkManager::need_update_chunks( const glm::ivec3& chunk_position ) const
 void
 ChunkManager::update_visible_chunks( const glm::vec3& position )
 {
+	if ( ( frame_count % 10 ) == 0 )
+	{
+		bool erase_something = false;
+		for ( auto it = chunks.begin(); it != chunks.end(); )
+		{
+			if ( frame_count - it->second.last_access_frame > 10 )
+			{
+				it              = chunks.erase( it );
+				erase_something = true;
+			}
+			else
+			{
+				it++;
+			}
+		}
+
+		if ( erase_something )
+		{
+			chunks.rehash( 0 );
+		}
+	}
+
+	mesh_generator->reset();
+
 	glm::ivec3 chunk_position;
 	to_chunk_position( chunk_position, position );
 
@@ -30,8 +55,6 @@ ChunkManager::update_visible_chunks( const glm::vec3& position )
 	{
 		return;
 	}
-
-	mesh_generator->reset();
 
 	std::list<Chunk*> chunks_to_push;
 
@@ -50,9 +73,10 @@ ChunkManager::update_visible_chunks( const glm::vec3& position )
 
 			if ( new_chunk )
 			{
-				chunk.init( spawn_position, this );
+				chunk.init( spawn_position, this, frame_count );
 			}
 
+			chunk.last_access_frame = frame_count;
 			chunks_to_push.push_back( &chunk );
 		}
 	}
@@ -65,6 +89,7 @@ ChunkManager::update_visible_chunks( const glm::vec3& position )
 
 	last_update_position     = chunk_position;
 	world_changed_last_frame = false;
+	frame_count++;
 }
 
 Voxel::Type
@@ -81,6 +106,7 @@ ChunkManager::get_voxel( const glm::ivec3& position ) const
 	{
 		glm::ivec3 local;
 		global_voxel_to_local( local, position );
+		it->second.last_access_frame = frame_count;
 		return it->second.get_voxel( local );
 	}
 }
@@ -103,19 +129,20 @@ ChunkManager::ensure_neighbors( const glm::ivec3& position,
 	if ( position.z == CHUNK_SIDE - 1 )
 		neighbor_position = chunk_position + glm::ivec3( 0, 0, 1 );
 
-// TODO: WORLD HEIGHT > 1
+	// TODO: WORLD HEIGHT > 1
 
-//	if ( position.y == 0 )
-//		neighbor_position = chunk_position - glm::ivec3( 0, 1, 0 );
+	//	if ( position.y == 0 )
+	//		neighbor_position = chunk_position - glm::ivec3( 0, 1, 0 );
 
-//	if ( position.y == CHUNK_SIDE - 1 )
-//		neighbor_position = chunk_position + glm::ivec3( 0, 1, 0 );
+	//	if ( position.y == CHUNK_SIDE - 1 )
+	//		neighbor_position = chunk_position + glm::ivec3( 0, 1, 0 );
 
 	auto it = chunks.find( neighbor_position );
 
 	if ( it != chunks.end() )
 	{
-		it->second.modified = true;
+		it->second.modified          = true;
+		it->second.last_access_frame = frame_count;
 		mesh_generator->push_chunk( it->second );
 	}
 }
@@ -131,6 +158,7 @@ ChunkManager::set_voxel( const glm::ivec3& position, Voxel::Type voxel )
 
 	if ( it != chunks.cend() )
 	{
+		it->second.last_access_frame = frame_count;
 		it->second.set_voxel( local, voxel );
 		mesh_generator->push_chunk( it->second );
 		if ( is_transparent( voxel ) )
@@ -144,6 +172,7 @@ ChunkManager::set_voxel( const glm::ivec3& position, Voxel::Type voxel )
 		chunk.chunk_manager = this;
 		chunk.data.fill( Voxel::AIR );
 		chunk.set_voxel( local, voxel );
+		chunk.last_access_frame = frame_count;
 		mesh_generator->push_chunk( chunk );
 	}
 }

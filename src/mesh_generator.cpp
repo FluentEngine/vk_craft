@@ -123,13 +123,16 @@ MeshGenerator::generate_mesh_data( const Chunk& chunk )
 	{
 		if ( chunk.modified == false )
 		{
-			return mesh_data_map[ chunk.position ];
+			MeshData& data         = mesh_data_map[ chunk.position ];
+			data.last_access_frame = frame_count;
+			return data;
 		}
 	}
 
 	chunk.modified = false;
 
-	MeshData& data = mesh_data_map[ chunk.position ];
+	MeshData& data         = mesh_data_map[ chunk.position ];
+	data.last_access_frame = frame_count;
 	data.vertices.clear();
 	data.indices.clear();
 

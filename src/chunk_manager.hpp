@@ -18,12 +18,14 @@ private:
 
 	std::unordered_map<glm::ivec3, Chunk> chunks;
 
+	size_t frame_count;
+
 	bool
 	need_update_chunks( const glm::ivec3& ) const;
 
 	void
 	ensure_neighbors( const glm::ivec3& position,
-	                   const glm::ivec3& chunk_position );
+	                  const glm::ivec3& chunk_position );
 
 public:
 	void

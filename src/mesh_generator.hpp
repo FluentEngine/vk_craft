@@ -40,6 +40,7 @@ private:
 	{
 		Vertices vertices;
 		Indices  indices;
+		size_t   last_access_frame;
 	};
 
 	const struct ft_device* device = nullptr;
@@ -49,6 +50,8 @@ private:
 
 	std::unordered_map<glm::vec3, MeshData> mesh_data_map;
 	Meshes                                  meshes;
+
+	size_t frame_count;
 
 	void
 	ft_create_buffers();
@@ -80,9 +83,31 @@ public:
 	void
 	reset()
 	{
+		if ( ( frame_count % 10 ) == 0 )
+		{
+			bool erase_something = false;
+			for ( auto it = mesh_data_map.begin(); it != mesh_data_map.end(); )
+			{
+				if ( frame_count - it->second.last_access_frame > 10 )
+				{
+					it              = mesh_data_map.erase( it );
+					erase_something = true;
+				}
+				else
+				{
+					it++;
+				}
+			}
+
+			if ( erase_something )
+			{
+				mesh_data_map.rehash( 0 );
+			}
+		}
 		vertex_buffer.offset = 0;
 		index_buffer.offset  = 0;
 		meshes.clear();
+		frame_count++;
 	}
 
 	void

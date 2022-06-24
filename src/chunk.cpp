@@ -28,9 +28,11 @@ height_to_voxel( int32_t height, int32_t top )
 }
 
 void
-Chunk::init( const glm::vec3 pos, ChunkManager* manager )
+Chunk::init( const glm::vec3 pos, ChunkManager* manager, size_t last_access_frame )
 {
-	chunk_manager = manager;
+	chunk_manager           = manager;
+	this->last_access_frame = last_access_frame;
+
 	position[ 0 ] = pos[ 0 ];
 	position[ 1 ] = pos[ 1 ];
 	position[ 2 ] = pos[ 2 ];
