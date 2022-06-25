@@ -54,9 +54,9 @@ private:
 	size_t frame_count;
 
 	void
-	ft_create_buffers();
+	create_buffers();
 	void
-	ft_destroy_buffers();
+	destroy_buffers();
 
 	MeshData&
 	generate_mesh_data( const Chunk& );

@@ -2,7 +2,7 @@
 #include "mesh_generator.hpp"
 
 void
-MeshGenerator::ft_create_buffers()
+MeshGenerator::create_buffers()
 {
 	struct ft_buffer_info info = {};
 	info.memory_usage          = FT_MEMORY_USAGE_CPU_TO_GPU;
@@ -20,7 +20,7 @@ MeshGenerator::ft_create_buffers()
 }
 
 void
-MeshGenerator::ft_destroy_buffers()
+MeshGenerator::destroy_buffers()
 {
 	ft_unmap_memory( device, vertex_buffer.buffer );
 	ft_unmap_memory( device, index_buffer.buffer );
@@ -32,13 +32,13 @@ void
 MeshGenerator::init( const struct ft_device* device )
 {
 	this->device = device;
-	ft_create_buffers();
+	create_buffers();
 }
 
 void
 MeshGenerator::shutdown()
 {
-	ft_destroy_buffers();
+	destroy_buffers();
 }
 
 static inline void
