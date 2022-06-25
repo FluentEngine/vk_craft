@@ -20,15 +20,9 @@ using Meshes   = std::list<Mesh>;
 class MeshGenerator
 {
 private:
-	static constexpr uint64_t MAX_CHUNK_VERTEX_COUNT = ( CHUNK_VOLUME * 24 );
-	static constexpr uint64_t MAX_CHUNK_INDEX_COUNT  = ( CHUNK_VOLUME * 36 );
-	static constexpr uint64_t MAX_CHUNK_COUNT =
-	    ( 4 * ( CHUNKS_IN_RENDER_DISTANCE * CHUNKS_IN_RENDER_DISTANCE ) );
-
-	static constexpr uint64_t VERTEX_BUFFER_SIZE =
-	    ( MAX_CHUNK_COUNT * MAX_CHUNK_VERTEX_COUNT * sizeof( Vertex ) ) / 8;
-	static constexpr uint64_t INDEX_BUFFER_SIZE =
-	    ( MAX_CHUNK_COUNT * MAX_CHUNK_INDEX_COUNT * sizeof( Index ) ) / 8;
+	// its ~30 chunks in all sides much more than we need
+	static constexpr uint64_t VERTEX_BUFFER_SIZE = 10 * 1024 * 1024 * 8;
+	static constexpr uint64_t INDEX_BUFFER_SIZE  = 10 * 1024 * 1024 * 8;
 
 	struct MeshBuffer
 	{
@@ -75,7 +69,10 @@ public:
 	shutdown();
 
 	void
-	push_chunk( const Chunk& );
+	push_chunk( const Chunk& chunk );
+
+	void
+	push_chunks( const std::list<Chunk*>& chunks );
 
 	void
 	pop_chunk();
@@ -97,11 +94,6 @@ public:
 				{
 					it++;
 				}
-			}
-
-			if ( erase_something )
-			{
-				mesh_data_map.rehash( 0 );
 			}
 		}
 		vertex_buffer.offset = 0;

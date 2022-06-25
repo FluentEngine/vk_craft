@@ -1,5 +1,8 @@
+#include <future>
 #include "quad.hpp"
 #include "mesh_generator.hpp"
+#include "coordinates.hpp"
+#include "chunk_manager.hpp"
 
 void
 MeshGenerator::create_buffers()
@@ -42,68 +45,6 @@ MeshGenerator::shutdown()
 }
 
 static inline void
-push_face( Vertices&         vertices,
-           Voxel::Type       voxel,
-           Face::Type        face,
-           const glm::ivec3& chunk_position,
-           const glm::ivec3& block_position )
-{
-	glm::vec3* face_data = nullptr;
-
-	switch ( face )
-	{
-	case Face::FRONT:
-	{
-		face_data = front_face;
-		break;
-	}
-	case Face::BACK:
-	{
-		face_data = back_face;
-		break;
-	}
-	case Face::LEFT:
-	{
-		face_data = left_face;
-		break;
-	}
-	case Face::RIGHT:
-	{
-		face_data = right_face;
-		break;
-	}
-	case Face::BOTTOM:
-	{
-		face_data = bottom_face;
-		break;
-	}
-	case Face::TOP:
-	{
-		face_data = top_face;
-		break;
-	}
-	default: abort();
-	}
-
-	glm::vec2 uv;
-	get_uv( uv, voxel, face );
-	float f = static_cast<float>( face );
-
-	glm::vec3 offset( chunk_position * CHUNK_SIDE + block_position );
-
-	vertices.emplace_back( face_data[ 0 ] + offset, uv, f );
-	vertices.emplace_back( face_data[ 1 ] + offset,
-	                       glm::vec2( uv.x, uv.y + UV_SIZE ),
-	                       f );
-	vertices.emplace_back( face_data[ 2 ] + offset,
-	                       glm::vec2( uv.x + UV_SIZE, uv.y + UV_SIZE ),
-	                       f );
-	vertices.emplace_back( face_data[ 3 ] + offset,
-	                       glm::vec2( uv.x + UV_SIZE, uv.y ),
-	                       f );
-}
-
-static inline void
 push_indices( Indices& indices, Index& m )
 {
 	indices.insert( indices.end(),
@@ -138,31 +79,214 @@ MeshGenerator::generate_mesh_data( const Chunk& chunk )
 
 	Index m = 0;
 
-	data.vertices.reserve( MAX_CHUNK_VERTEX_COUNT );
-	data.indices.reserve( MAX_CHUNK_INDEX_COUNT );
+	data.vertices.reserve( 4000 );
+	data.indices.reserve( 4000 * 6 );
 
-	for ( int32_t z = 0; z < CHUNK_SIDE; z++ )
+	// TODO: refactor
+	// TODO: optimize
+
+	struct VoxelFace
 	{
-		for ( int32_t x = 0; x < CHUNK_SIDE; x++ )
+		Voxel::Type voxel;
+		Face::Type  face;
+	};
+
+	int        i, j, k, l, w, h, u, v, n;
+	Face::Type face;
+
+	int32_t x[ 3 ]  = { 0, 0, 0 };
+	int32_t q[ 3 ]  = { 0, 0, 0 };
+	int32_t du[ 3 ] = { 0, 0, 0 };
+	int32_t dv[ 3 ] = { 0, 0, 0 };
+
+	VoxelFace mask[ CHUNK_SIZE_SQUARED ];
+	memset( mask, 0, sizeof( mask ) );
+
+	VoxelFace voxel_face0, voxel_face1;
+
+	for ( bool back_face = true, b = false; b != back_face;
+	      back_face = back_face && b, b = !b )
+	{
+		for ( int d = 0; d < 3; d++ )
 		{
-			for ( int32_t y = 0; y < CHUNK_SIDE; y++ )
+			u = ( d + 1 ) % 3;
+			v = ( d + 2 ) % 3;
+
+			x[ 0 ] = 0;
+			x[ 1 ] = 0;
+			x[ 2 ] = 0;
+
+			q[ 0 ] = 0;
+			q[ 1 ] = 0;
+			q[ 2 ] = 0;
+			q[ d ] = 1;
+
+			if ( d == 0 )
 			{
-				glm::ivec3 block_position( x, y, z );
+				face = back_face ? Face::LEFT : Face::RIGHT;
+			}
+			else if ( d == 1 )
+			{
+				face = back_face ? Face::BOTTOM : Face::TOP;
+			}
+			else if ( d == 2 )
+			{
+				face = back_face ? Face::BACK : Face::FRONT;
+			}
 
-				if ( chunk.get_voxel( block_position ) != Voxel::AIR )
+			for ( x[ d ] = -1; x[ d ] < CHUNK_SIZE; )
+			{
+				n = 0;
+
+				for ( x[ v ] = 0; x[ v ] < CHUNK_SIZE; x[ v ]++ )
 				{
-					auto neighbors = chunk.get_neighbors( block_position );
-
-					for ( uint32_t i = 0; i < uint32_t( Face::COUNT ); i++ )
+					for ( x[ u ] = 0; x[ u ] < CHUNK_SIZE; x[ u ]++ )
 					{
-						if ( is_transparent( neighbors[ i ] ) )
+						voxel_face0 =
+						    ( x[ d ] >= 0 )
+						        ? VoxelFace { chunk.get_voxel(
+						                          { x[ 0 ], x[ 1 ], x[ 2 ] } ),
+						                      face }
+						        : VoxelFace { Voxel::AIR };
+						voxel_face1 =
+						    ( x[ d ] < CHUNK_SIZE - 1 )
+						        ? VoxelFace { chunk.get_voxel(
+						                          { x[ 0 ] + q[ 0 ],
+						                            x[ 1 ] + q[ 1 ],
+						                            x[ 2 ] + q[ 2 ] } ),
+						                      face }
+						        : VoxelFace { Voxel::AIR };
+
+						mask[ n++ ] =
+						    ( ( voxel_face0.voxel != Voxel::AIR &&
+						        voxel_face1.voxel != Voxel::AIR &&
+						        voxel_face0.voxel == voxel_face1.voxel ) )
+						        ? VoxelFace { Voxel::AIR }
+						    : back_face ? voxel_face1
+						                : voxel_face0;
+					}
+				}
+
+				x[ d ]++;
+
+				n = 0;
+
+				for ( j = 0; j < CHUNK_SIZE; j++ )
+				{
+					for ( i = 0; i < CHUNK_SIZE; )
+					{
+						if ( mask[ n ].voxel != Voxel::AIR )
 						{
-							push_face( data.vertices,
-							           chunk.get_voxel( block_position ),
-							           Face::Type( i ),
-							           chunk.position,
-							           block_position );
+							for ( w = 1; i + w < CHUNK_SIZE &&
+							             mask[ n + w ].voxel != Voxel::AIR &&
+							             mask[ n + w ].voxel == mask[ n ].voxel;
+							      w++ )
+							{
+							}
+
+							bool done = false;
+
+							for ( h = 1; j + h < CHUNK_SIZE; h++ )
+							{
+								for ( k = 0; k < w; k++ )
+								{
+									if ( mask[ n + k + h * CHUNK_SIZE ].voxel ==
+									         Voxel::AIR ||
+									     !( mask[ n + k + h * CHUNK_SIZE ]
+									            .voxel == mask[ n ].voxel ) )
+									{
+										done = true;
+										break;
+									}
+								}
+
+								if ( done )
+								{
+									break;
+								}
+							}
+
+							x[ u ] = i;
+							x[ v ] = j;
+
+							du[ 0 ] = 0;
+							du[ 1 ] = 0;
+							du[ 2 ] = 0;
+							du[ u ] = w;
+
+							dv[ 0 ] = 0;
+							dv[ 1 ] = 0;
+							dv[ 2 ] = 0;
+							dv[ v ] = h;
+
+							glm::vec2 uv;
+							get_uv( uv, mask[ n ].voxel, mask[ n ].face );
+
+							Vertex v0( glm::ivec3( x[ 0 ], x[ 1 ], x[ 2 ] ) +
+							               chunk.position * CHUNK_SIZE,
+							           uv,
+							           mask[ n ].face );
+
+							Vertex v1( glm::ivec3( x[ 0 ] + du[ 0 ],
+							                       x[ 1 ] + du[ 1 ],
+							                       x[ 2 ] + du[ 2 ] ) +
+							               chunk.position * CHUNK_SIZE,
+							           uv,
+							           mask[ n ].face );
+
+							Vertex v2(
+							    glm::ivec3( x[ 0 ] + du[ 0 ] + dv[ 0 ],
+							                x[ 1 ] + du[ 1 ] + dv[ 1 ],
+							                x[ 2 ] + du[ 2 ] + dv[ 2 ] ) +
+							        chunk.position * CHUNK_SIZE,
+							    uv,
+							    mask[ n ].face );
+
+							Vertex v3( glm::ivec3( x[ 0 ] + dv[ 0 ],
+							                       x[ 1 ] + dv[ 1 ],
+							                       x[ 2 ] + dv[ 2 ] ) +
+							               chunk.position * CHUNK_SIZE,
+							           uv,
+							           mask[ n ].face );
+
+							switch ( mask[ n ].face )
+							{
+							case Face::BOTTOM:
+							case Face::BACK:
+							case Face::LEFT:
+							{
+								data.vertices.insert( data.vertices.end(),
+								                      { v3, v2, v1, v0 } );
+								break;
+							}
+							case Face::TOP:
+							case Face::RIGHT:
+							case Face::FRONT:
+							{
+								data.vertices.insert( data.vertices.end(),
+								                      { v0, v1, v2, v3 } );
+								break;
+							}
+							}
+
 							push_indices( data.indices, m );
+
+							for ( l = 0; l < h; ++l )
+							{
+								for ( k = 0; k < w; ++k )
+								{
+									mask[ n + k + l * CHUNK_SIZE ].voxel =
+									    Voxel::AIR;
+								}
+							}
+
+							i += w;
+							n += w;
+						}
+						else
+						{
+							i++;
+							n++;
 						}
 					}
 				}
@@ -208,6 +332,15 @@ MeshGenerator::push_chunk( const Chunk& chunk )
 }
 
 void
+MeshGenerator::push_chunks( const std::list<Chunk*>& chunks )
+{
+	for ( const Chunk* chunk : chunks )
+	{
+		upload_mesh( generate_mesh_data( *chunk ) );
+	}
+}
+
+void
 MeshGenerator::pop_chunk()
 {
 	meshes.pop_front();
@@ -221,7 +354,6 @@ MeshGenerator::reset_if_need( const Vertices& vertices, const Indices& indices )
 	     ( index_buffer.offset + indices.size() * sizeof( Index ) >
 	       INDEX_BUFFER_SIZE ) )
 	{
-		FT_INFO( "Reset mesh generator buffer" );
 		vertex_buffer.offset = 0;
 		index_buffer.offset  = 0;
 	}

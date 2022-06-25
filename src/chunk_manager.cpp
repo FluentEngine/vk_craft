@@ -39,11 +39,6 @@ ChunkManager::update_visible_chunks( const glm::vec3& position )
 				it++;
 			}
 		}
-
-		if ( erase_something )
-		{
-			chunks.rehash( 0 );
-		}
 	}
 
 	mesh_generator->reset();
@@ -82,10 +77,7 @@ ChunkManager::update_visible_chunks( const glm::vec3& position )
 	}
 
 	// need this for face removing proper work
-	for ( auto chunk : chunks_to_push )
-	{
-		mesh_generator->push_chunk( *chunk );
-	}
+	mesh_generator->push_chunks( chunks_to_push );
 
 	last_update_position     = chunk_position;
 	world_changed_last_frame = false;
@@ -120,13 +112,13 @@ ChunkManager::ensure_neighbors( const glm::ivec3& position,
 	if ( position.x == 0 )
 		neighbor_position = chunk_position - glm::ivec3( 1, 0, 0 );
 
-	if ( position.x == CHUNK_SIDE - 1 )
+	if ( position.x == CHUNK_SIZE - 1 )
 		neighbor_position = chunk_position + glm::ivec3( 1, 0, 0 );
 
 	if ( position.z == 0 )
 		neighbor_position = chunk_position - glm::ivec3( 0, 0, 1 );
 
-	if ( position.z == CHUNK_SIDE - 1 )
+	if ( position.z == CHUNK_SIZE - 1 )
 		neighbor_position = chunk_position + glm::ivec3( 0, 0, 1 );
 
 	// TODO: WORLD HEIGHT > 1
@@ -134,7 +126,7 @@ ChunkManager::ensure_neighbors( const glm::ivec3& position,
 	//	if ( position.y == 0 )
 	//		neighbor_position = chunk_position - glm::ivec3( 0, 1, 0 );
 
-	//	if ( position.y == CHUNK_SIDE - 1 )
+	//	if ( position.y == CHUNK_SIZE - 1 )
 	//		neighbor_position = chunk_position + glm::ivec3( 0, 1, 0 );
 
 	auto it = chunks.find( neighbor_position );

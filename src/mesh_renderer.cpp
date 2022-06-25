@@ -22,6 +22,9 @@ MeshRenderer::create_atlas( enum ft_format color_format )
 	struct ft_sampler_info sampler_info = {};
 	sampler_info.min_filter             = FT_FILTER_NEAREST;
 	sampler_info.mag_filter             = FT_FILTER_NEAREST;
+	sampler_info.address_mode_u         = FT_SAMPLER_ADDRESS_MODE_REPEAT;
+	sampler_info.address_mode_v         = FT_SAMPLER_ADDRESS_MODE_REPEAT;
+	sampler_info.address_mode_w         = FT_SAMPLER_ADDRESS_MODE_REPEAT;
 
 	ft_create_sampler( device, &sampler_info, &sampler );
 
@@ -32,11 +35,11 @@ MeshRenderer::create_atlas( enum ft_format color_format )
 	image_info.mip_levels           = 1;
 	image_info.format = ft_is_srgb( color_format ) ? FT_FORMAT_R8G8B8A8_SRGB
 	                                               : FT_FORMAT_R8G8B8A8_UNORM;
-	image_info.descriptor_type      = FT_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+	image_info.descriptor_type = FT_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
 
-	void*  image_data      = ft_read_image_from_file( "atlas.png",
-                                                &image_info.width,
-                                                &image_info.height );
+	void* image_data = ft_read_image_from_file( "atlas.png",
+	                                            &image_info.width,
+	                                            &image_info.height );
 
 	size_t image_data_size = image_info.width * image_info.height * 4;
 
@@ -95,9 +98,9 @@ MeshRenderer::create_mesh_pipeline( enum ft_format color_format,
 	pipe_info.shader                     = shader;
 	pipe_info.descriptor_set_layout      = dsl;
 	pipe_info.topology                   = FT_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-	pipe_info.rasterizer_info.cull_mode  = FT_CULL_MODE_BACK;
-	pipe_info.rasterizer_info.front_face = FT_FRONT_FACE_COUNTER_CLOCKWISE;
-	pipe_info.rasterizer_info.polygon_mode  = FT_POLYGON_MODE_FILL;
+	pipe_info.rasterizer_info.cull_mode    = FT_CULL_MODE_BACK;
+	pipe_info.rasterizer_info.front_face   = FT_FRONT_FACE_COUNTER_CLOCKWISE;
+	pipe_info.rasterizer_info.polygon_mode = FT_POLYGON_MODE_FILL;
 	pipe_info.depth_state_info.depth_test   = true;
 	pipe_info.depth_state_info.depth_write  = true;
 	pipe_info.depth_state_info.compare_op   = FT_COMPARE_OP_LESS;
